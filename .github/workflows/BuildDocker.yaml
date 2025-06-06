@@ -1,0 +1,60 @@
+name: Docker Build
+
+on:
+    push:
+        tags:
+            - 'v*.*.*'
+    workflow_call:
+      inputs:
+        image_tag:
+          required: true
+          type: string
+      secrets:
+        docker_user:
+          required: true
+        docker_password:
+          required: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.24.2'
+
+      - name: Run Test
+        run: go test ./...
+    
+      - name: code quality 
+        id: lint
+        run: curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+      - name: build app
+        run: |
+            go build -o app ./app/cmd/webserver
+      
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app
+          path: app
+
+  extract-image-tag:
+    needs: test
+    runs-on: ubuntu-latest
+    outputs:
+      IMAGE_TAG: ${{ steps.image-tag.outputs.IMAGE_TAG }}
+    steps:
+      - id: image-tag
+        run: echo "IMAGE_TAG=$(echo ${{ github.ref }} | awk -F '/' '{ print $NF }')" >> $GITHUB_OUTPUT
+  build-docker-image:
+    needs: [extract-image-tag]
+    uses: KevPoirier/actions/.github/workflows/build-docker.yaml@main
+    secrets:
+      docker_user: ${{ secrets.DOCKERHUB_USERNAME }}
+      docker_password: ${{ secrets.DOCKERHUB_TOKEN }}
