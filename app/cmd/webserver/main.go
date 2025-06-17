@@ -11,7 +11,7 @@ func helloHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.Println("🏁 [INFO] Starting Poker Server version 0.1.11...")
+	log.Println("🏁 [INFO] Starting hello Server version 0.1.2...")
 	http.HandleFunc("/", helloHandler)
 	fmt.Println("Server is running on port 8080")
 	http.ListenAndServe(":8080", nil)
